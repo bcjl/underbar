@@ -161,16 +161,16 @@
   //   }); // should be 5, regardless of the iterator function passed in
   //          No accumulator is given so the first element is used.
   _.reduce = function(collection, iterator, accumulator) {
-
-    if(accumulator !== undefined){
-      collection.unshift(accumulator);
-    } 
-    var output = collection[0];
-    for(var i = 1; i < collection.length; i++){
-      output = iterator(output, collection[i]);
-    }
-
-    return output;
+      var keySet = Object.keys(collection);
+      if (accumulator !== undefined){
+        keySet.unshift("AccumulatorKey");
+        collection["AccumulatorKey"] = accumulator;
+      }
+      var output = collection[keySet[0]];
+      for (var i = 1; i < keySet.length; i++){
+        output = iterator(output, collection[keySet[i]])
+      }
+      return output;
   };
 
   // Determine if the array or object contains a given value (using `===`).
@@ -189,12 +189,40 @@
   // Determine whether all of the elements match a truth test.
   _.every = function(collection, iterator) {
     // TIP: Try re-using reduce() here.
+    if (iterator === undefined){
+      iterator = function(input){
+        return input === true;
+      };
+    }
+    var wrappedIterator = function(wasFound, item){
+      if(!wasFound){
+        return false;
+      }
+      return iterator(item);
+    }
+    return !!_.reduce(collection, wrappedIterator, true);
+    //NOTE: I have a very vague idea of why and how this is working.
   };
 
   // Determine whether any of the elements pass a truth test. If no iterator is
   // provided, provide a default one
   _.some = function(collection, iterator) {
     // TIP: There's a very clever way to re-use every() here.
+    if(iterator === undefined){
+      iterator = function(input){
+        return input === true;
+      };
+    }
+
+    var wrappedIterator = function(wasFound, item){
+        if(wasFound){
+          return true;
+        }
+        return iterator(item);
+    }
+    return !!_.reduce(collection, wrappedIterator, false);
+    //revisit this later for _.every mod
+
   };
 
 
@@ -217,11 +245,29 @@
   //     bla: "even more stuff"
   //   }); // obj1 now contains key1, key2, key3 and bla
   _.extend = function(obj) {
+    for(var x = 1; x < arguments.length; x++){
+      var objOfInterest = arguments[x];
+      var keySet = Object.keys(objOfInterest);
+      for(var i = 0; i < keySet.length; i++){
+        obj[keySet[i]] = objOfInterest[keySet[i]];
+      }
+    }
+    return obj;
   };
 
   // Like extend, but doesn't ever overwrite a key that already
   // exists in obj
   _.defaults = function(obj) {
+    for(var x = 1; x < arguments.length; x++){
+      var objOfInterest = arguments[x];
+      var keySet = Object.keys(objOfInterest);
+      for(var i = 0; i < keySet.length; i++){
+        if (obj[keySet[i]] === undefined){
+        obj[keySet[i]] = objOfInterest[keySet[i]];
+        }
+      }
+    }
+    return obj;
   };
 
 
@@ -265,6 +311,19 @@
   // already computed the result for the given argument and return that value
   // instead if possible.
   _.memoize = function(func) {
+    var storedMemo = {};
+
+    return function(key){
+    var address = "" + key;
+    if (!_.contains(Object.keys(storedMemo), address)){
+        var result = func.apply(this, arguments);
+        storedMemo[address] = result;
+        return result;
+      
+    } else{
+        return storedMemo[address];
+      }
+    }
   };
 
   // Delays a function for the given number of milliseconds, and then calls
@@ -274,6 +333,10 @@
   // parameter. For example _.delay(someFunction, 500, 'a', 'b') will
   // call someFunction('a', 'b') after 500ms
   _.delay = function(func, wait) {
+    var args = Array.prototype.slice.call(arguments, 2);
+    return setTimeout(function(){
+      return func.apply(null, args);
+    }, wait);
   };
 
 
@@ -288,6 +351,14 @@
   // input array. For a tip on how to make a copy of an array, see:
   // http://mdn.io/Array.prototype.slice
   _.shuffle = function(array) {
+    var copiedarray = array.slice(0);
+    var result = [];
+    for(var x = 0; x < array.length; x++){
+      var randpos = Math.floor(Math.random() * copiedarray.length); 
+      result.push(copiedarray[randpos]);
+      copiedarray.splice(randpos, 1);
+    }
+    return result;
   };
 
 
